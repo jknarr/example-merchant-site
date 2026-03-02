@@ -63,7 +63,7 @@ export const CartContext = createContext<CartContextValue | null>(null);
 
 // --- Provider ---
 
-const STORAGE_KEY = 'paze_cart';
+const STORAGE_KEY = 'demo_cart';
 
 function loadFromStorage(): CartState {
   try {

@@ -18,7 +18,7 @@ export function Header() {
           >
             <path d="M3 3h18a1 1 0 011 1v4a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1zm0 8h18a1 1 0 011 1v4a1 1 0 01-1 1H3a1 1 0 01-1-1v-4a1 1 0 011-1zm0 8h18a1 1 0 010 2H3a1 1 0 010-2z" />
           </svg>
-          Paze Shop
+          Demo Shop
         </Link>
 
         {/* Nav */}

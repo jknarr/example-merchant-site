@@ -3,19 +3,19 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../hooks/useCart';
 import type { Order, ShippingAddress } from '../types';
 
-const BACKEND_URL = import.meta.env.VITE_PAZE_BACKEND_URL as string;
-const MERCHANT_ID = import.meta.env.VITE_PAZE_MERCHANT_ID as string;
+const BACKEND_URL = import.meta.env.VITE_DEMO_BACKEND_URL as string;
+const MERCHANT_ID = import.meta.env.VITE_DEMO_MERCHANT_ID as string;
 
 declare global {
   interface Window {
-    PazeCheckout?: {
+    DemoCheckout?: {
       mount: (
         container: HTMLElement,
         config: {
           merchantId: string;
           backendUrl: string;
           cart: { productId: string; name: string; price: number; quantity: number; imageUrl?: string }[];
-          onSuccess: (result: PazeSuccessResult) => void;
+          onSuccess: (result: DemoSuccessResult) => void;
           onError: (error: { code: string; message: string }) => void;
           onCancel: () => void;
         }
@@ -24,7 +24,7 @@ declare global {
   }
 }
 
-interface PazeSuccessResult {
+interface DemoSuccessResult {
   orderId: string;
   transactionId: string;
   timestamp: string;
@@ -53,9 +53,12 @@ export function CheckoutPage() {
   useEffect(() => {
     if (items.length === 0 || !containerRef.current) return;
     let mounted = true;
+    let sdkScript: HTMLScriptElement | null = null;
 
     function mountSDK() {
-      if (!mounted || !window.PazeCheckout || !containerRef.current) return;
+      if (!mounted || !window.DemoCheckout || !containerRef.current) return;
+      unmountRef.current?.();
+      unmountRef.current = null;
 
       const cart = items.map(({ product, quantity }) => ({
         productId: product.id,
@@ -65,11 +68,11 @@ export function CheckoutPage() {
         imageUrl: product.imageUrl,
       }));
 
-      unmountRef.current = window.PazeCheckout.mount(containerRef.current, {
+      unmountRef.current = window.DemoCheckout.mount(containerRef.current, {
         merchantId: MERCHANT_ID,
         backendUrl: BACKEND_URL,
         cart,
-        onSuccess: (result: PazeSuccessResult) => {
+        onSuccess: (result: DemoSuccessResult) => {
           const shipping: ShippingAddress = {
             firstName: result.shipping.firstName,
             lastName: result.shipping.lastName,
@@ -103,7 +106,7 @@ export function CheckoutPage() {
           navigate(`/order/${result.orderId}`, { state: { order } });
         },
         onError: (error) => {
-          console.error('[PazeCheckout] Error:', error);
+          console.error('[DemoCheckout] Error:', error);
         },
         onCancel: () => {
           navigate(-1);
@@ -111,21 +114,30 @@ export function CheckoutPage() {
       });
     }
 
-    // If SDK already loaded (hot reload), mount immediately
-    if (window.PazeCheckout) {
-      mountSDK();
-      return;
+    function onScriptError() {
+      if (!mounted) return;
+      console.error('[DemoCheckout] Failed to load SDK');
     }
 
-    // Dynamically load SDK script
-    const script = document.createElement('script');
-    script.src = '/paze-checkout.umd.js';
-    script.onload = mountSDK;
-    script.onerror = () => console.error('[PazeCheckout] Failed to load SDK');
-    document.head.appendChild(script);
+    // If SDK already loaded (hot reload), mount immediately.
+    if (window.DemoCheckout) {
+      mountSDK();
+    } else {
+      sdkScript = document.querySelector('script[data-demo-sdk="true"]');
+      if (!sdkScript) {
+        sdkScript = document.createElement('script');
+        sdkScript.src = '/demo-checkout.umd.js';
+        sdkScript.dataset.demoSdk = 'true';
+        document.head.appendChild(sdkScript);
+      }
+      sdkScript.addEventListener('load', mountSDK);
+      sdkScript.addEventListener('error', onScriptError);
+    }
 
     return () => {
       mounted = false;
+      sdkScript?.removeEventListener('load', mountSDK);
+      sdkScript?.removeEventListener('error', onScriptError);
       unmountRef.current?.();
       unmountRef.current = null;
     };
@@ -146,7 +158,7 @@ export function CheckoutPage() {
     <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <h1 className="mb-8 text-3xl font-bold text-gray-900">Checkout</h1>
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
-        {/* Paze Checkout iframe */}
+        {/* Demo Checkout iframe */}
         <div className="lg:col-span-2">
           <div
             ref={containerRef}
